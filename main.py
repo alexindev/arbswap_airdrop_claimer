@@ -9,15 +9,19 @@ def claim(wallet: list):
         w3 = Web3(Web3.HTTPProvider(RPC))
         contract = w3.eth.contract(address=w3.to_checksum_address(CONTRACT_ADDRESS), abi=ABI)
         address = w3.to_checksum_address(w3.eth.account.from_key(privatekey).address)
+        balance = w3.from_wei(w3.eth.get_balance(address), 'ether')
+        if balance < 0.000099:
+            logger.error(f'insufficient for gas: wallet - {address}')
+            continue
         nonce = w3.eth.get_transaction_count(address)
 
         tx = contract.functions.claim().build_transaction(
                 {
-                    'chainId': w3.eth.chain_id,
+                    'chainId': 42161,
                     'from': address,
                     'nonce': nonce,
                     'gasPrice': 100_000_000,
-                    'gas': int(w3.eth.get_block('latest')['gasLimit']/10**9)
+                    'gas': 1_000_000
                 }
         )
 
@@ -34,8 +38,8 @@ def claim(wallet: list):
                 with open('success.txt', 'a') as f:
                     f.write(f'{address}:{privatekey}\n')
 
-        except ValueError:
-            logger.error(f'insufficient for gas: wallet - {address}')
+        except Exception as e:
+            logger.error(f'Error {e}: wallet - {address}')
 
 
 if __name__ == '__main__':
@@ -43,4 +47,3 @@ if __name__ == '__main__':
         wallets = [wallet.strip() for wallet in file]
 
     claim(wallets)
-
